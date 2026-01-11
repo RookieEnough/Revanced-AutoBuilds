@@ -1,0 +1,224 @@
+name: Manual Patch and Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'App name (from apps/ folder)'
+        required: true
+        type: string
+        default: 'youtube'
+      source:
+        description: 'Source name (from sources/ folder)'
+        required: true
+        type: string
+        default: 'revanced'
+      version:
+        description: 'Specific version (leave empty for latest)'
+        required: false
+        type: string
+        default: ''
+      architecture:
+        description: 'Architecture to build'
+        required: false
+        type: choice
+        options:
+          - arm64-v8a
+          - armeabi-v7a
+          - universal
+        default: 'universal'
+      replace_in_release:
+        description: 'Replace APK in existing release'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  manual-patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Set Specific Version (if provided)
+        if: ${{ inputs.version != '' }}
+        run: |
+          # Update app config with specific version
+          for dir in apps/apkmirror apps/apkpure apps/uptodown; do
+            config_file="$dir/${{ inputs.app_name }}.json"
+            if [ -f "$config_file" ]; then
+              echo "Updating $config_file with version ${{ inputs.version }}"
+              # Update JSON with specific version
+              python -c "
+              import json, sys, os
+              with open('$config_file', 'r') as f:
+                  config = json.load(f)
+              config['version'] = '${{ inputs.version }}'
+              with open('$config_file', 'w') as f:
+                  json.dump(config, f, indent=2)
+              "
+              echo "Updated: $config_file"
+              break
+            fi
+          done
+      
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install requests beautifulsoup4
+      
+      - name: Build APK
+        env:
+          APP_NAME: ${{ inputs.app_name }}
+          SOURCE: ${{ inputs.source }}
+          ARCH: ${{ inputs.architecture }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔧 Building ${{ inputs.app_name }} with ${{ inputs.source }} for ${{ inputs.architecture }} architecture..."
+          python -m src
+      
+      - name: Find Built APK
+        id: find-apk
+        run: |
+          # Find the built APK file(s)
+          apk_files=$(ls -1 *.apk 2>/dev/null)
+          if [ -z "$apk_files" ]; then
+            echo "❌ No APK files found"
+            exit 1
+          fi
+          
+          # Create a list of APK files
+          apk_list=""
+          for apk in $apk_files; do
+            echo "Found APK: $apk"
+            apk_list="$apk_list $apk"
+          done
+          
+          echo "apk_files=${apk_files}" >> $GITHUB_OUTPUT
+          echo "apk_count=$(echo "$apk_files" | wc -l)" >> $GITHUB_OUTPUT
+      
+      - name: Upload as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-apk-${{ inputs.app_name }}-${{ inputs.architecture }}
+          path: "*.apk"
+      
+      - name: Check Existing Release
+        if: ${{ inputs.replace_in_release == true }}
+        id: check-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view latest >/dev/null 2>&1; then
+            echo "✅ Release 'latest' exists"
+            echo "release_exists=true" >> $GITHUB_OUTPUT
+            
+            # Get release assets
+            mkdir -p existing-release
+            gh release download latest -D existing-release || true
+            
+            # Count existing APKs
+            apk_count=$(find existing-release -name "*.apk" 2>/dev/null | wc -l)
+            echo "Existing APKs in release: $apk_count"
+            echo "apk_count=$apk_count" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Release 'latest' does not exist"
+            echo "release_exists=false" >> $GITHUB_OUTPUT
+            echo "apk_count=0" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Update Release
+        if: ${{ inputs.replace_in_release == true }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔄 Updating release..."
+          
+          # Create working directory
+          mkdir -p release-update
+          
+          # Copy new APK(s)
+          cp *.apk release-update/
+          
+          # Delete old release if exists
+          if gh release view latest >/dev/null 2>&1; then
+            echo "🗑️ Deleting old 'latest' release..."
+            gh release delete latest --yes --cleanup-tag
+          fi
+          
+          echo "📁 APKs to release:"
+          ls -la release-update/
+          
+          # Create simple release notes
+          cat > release_notes.md << EOF
+          # ReVanced APKs - Manual Update
+          
+          ## 📱 Available Apps
+          EOF
+          
+          for apk in release-update/*.apk; do
+            filename=$(basename "$apk")
+            echo "- $filename" >> release_notes.md
+          done
+          
+          cat >> release_notes.md << EOF
+          
+          ---
+          
+          **Manually updated at:** $(date)
+          **App:** ${{ inputs.app_name }}
+          **Architecture:** ${{ inputs.architecture }}
+          **Source:** ${{ inputs.source }}
+          
+          Auto-updates daily at 6 AM UTC.
+          EOF
+          
+          # Create new release
+          echo "🚀 Creating updated release..."
+          gh release create "latest" \
+            --title "ReVanced APKs - $(date +'%Y-%m-%d %H:%M')" \
+            --notes-file release_notes.md \
+            ./release-update/*.apk \
+            --latest
+          
+          echo "✅ Release updated successfully!"
+      
+      - name: Show Download Links
+        if: ${{ inputs.replace_in_release == true }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_url=$(gh release view latest --json url --jq .url)
+          echo "🔗 Updated Release URL: $release_url"
+          echo ""
+          echo "📦 Direct APK links:"
+          for apk in *.apk; do
+            echo "  - $release_url/download/$apk"
+          done
+      
+      - name: Cleanup Version Override
+        if: ${{ inputs.version != '' && always() }}
+        run: |
+          # Reset version to empty in configs
+          for dir in apps/apkmirror apps/apkpure apps/uptodown; do
+            config_file="$dir/${{ inputs.app_name }}.json"
+            if [ -f "$config_file" ]; then
+              echo "Resetting version in $config_file"
+              python -c "
+              import json, sys, os
+              with open('$config_file', 'r') as f:
+                  config = json.load(f)
+              config['version'] = ''
+              with open('$config_file', 'w') as f:
+                  json.dump(config, f, indent=2)
+              "
+            fi
+          done

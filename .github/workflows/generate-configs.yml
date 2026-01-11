@@ -1,0 +1,84 @@
+name: Generate App Configs
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  generate-configs:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Create Config Files
+        run: |
+          mkdir -p apps/{apkmirror,apkpure,uptodown}
+          
+          # APKMirror configs
+          echo '{"org":"disney","name":"disney-plus","type":"APK","arch":"universal","dpi":"nodpi","package":"com.disney.disneyplus","version":""}' > apps/apkmirror/disney-plus.json
+          echo '{"org":"facebook-2","name":"facebook","type":"APK","arch":"universal","dpi":"nodpi","package":"com.facebook.katana","version":""}' > apps/apkmirror/facebook.json
+          echo '{"org":"duolingo","name":"duolingo","type":"APK","arch":"universal","dpi":"nodpi","package":"com.duolingo","version":""}' > apps/apkmirror/duolingo.json
+          echo '{"org":"google-inc","name":"google-news","type":"APK","arch":"universal","dpi":"nodpi","package":"com.google.android.apps.magazines","version":""}' > apps/apkmirror/google-news.json
+          echo '{"org":"facebook-2","name":"messenger","type":"APK","arch":"universal","dpi":"nodpi","package":"com.facebook.orca","version":""}' > apps/apkmirror/messenger.json
+          echo '{"org":"adobe","name":"lightroom","type":"APK","arch":"universal","dpi":"nodpi","package":"com.adobe.lrmobile","version":""}' > apps/apkmirror/lightroom.json
+          echo '{"org":"photomath","name":"photomath","type":"APK","arch":"universal","dpi":"nodpi","package":"com.microblink.photomath","version":""}' > apps/apkmirror/photomath.json
+          echo '{"org":"pixiv","name":"pixiv","type":"APK","arch":"universal","dpi":"nodpi","package":"jp.pxv.android","version":""}' > apps/apkmirror/pixiv.json
+          echo '{"org":"amazon-com","name":"amazon-prime-video","type":"APK","arch":"universal","dpi":"nodpi","package":"com.amazon.avod.thirdpartyclient","version":""}' > apps/apkmirror/prime-video.json
+          echo '{"org":"proton-technologies","name":"proton-mail","type":"APK","arch":"universal","dpi":"nodpi","package":"ch.protonmail.android","version":""}' > apps/apkmirror/proton-mail.json
+          echo '{"org":"proton-technologies","name":"protonvpn","type":"APK","arch":"universal","dpi":"nodpi","package":"ch.protonvpn.android","version":""}' > apps/apkmirror/proton-vpn.json
+          echo '{"org":"rarlab","name":"rar","type":"APK","arch":"universal","dpi":"nodpi","package":"com.rarlab.rar","version":""}' > apps/apkmirror/rar.json
+          echo '{"org":"spotify-ltd","name":"spotify","type":"APK","arch":"universal","dpi":"nodpi","package":"com.spotify.music","version":""}' > apps/apkmirror/spotify.json
+          echo '{"org":"strava","name":"strava","type":"APK","arch":"universal","dpi":"nodpi","package":"com.strava","version":""}' > apps/apkmirror/strava.json
+          echo '{"org":"tumblr","name":"tumblr","type":"APK","arch":"universal","dpi":"nodpi","package":"com.tumblr","version":""}' > apps/apkmirror/tumblr.json
+          echo '{"org":"twitch-interactive","name":"twitch","type":"APK","arch":"universal","dpi":"nodpi","package":"tv.twitch.android.app","version":""}' > apps/apkmirror/twitch.json
+          echo '{"org":"viber","name":"viber","type":"APK","arch":"universal","dpi":"nodpi","package":"com.viber.voip","version":""}' > apps/apkmirror/viber.json
+          
+          # APKPure configs
+          echo '{"name":"disney-plus","package":"com.disney.disneyplus","version":""}' > apps/apkpure/disney-plus.json
+          echo '{"name":"facebook","package":"com.facebook.katana","version":""}' > apps/apkpure/facebook.json
+          echo '{"name":"duolingo","package":"com.duolingo","version":""}' > apps/apkpure/duolingo.json
+          echo '{"name":"google-news","package":"com.google.android.apps.magazines","version":""}' > apps/apkpure/google-news.json
+          echo '{"name":"messenger","package":"com.facebook.orca","version":""}' > apps/apkpure/messenger.json
+          echo '{"name":"lightroom","package":"com.adobe.lrmobile","version":""}' > apps/apkpure/lightroom.json
+          echo '{"name":"photomath","package":"com.microblink.photomath","version":""}' > apps/apkpure/photomath.json
+          echo '{"name":"pixiv","package":"jp.pxv.android","version":""}' > apps/apkpure/pixiv.json
+          echo '{"name":"prime-video","package":"com.amazon.avod.thirdpartyclient","version":""}' > apps/apkpure/prime-video.json
+          echo '{"name":"proton-mail","package":"ch.protonmail.android","version":""}' > apps/apkpure/proton-mail.json
+          echo '{"name":"proton-vpn","package":"ch.protonvpn.android","version":""}' > apps/apkpure/proton-vpn.json
+          echo '{"name":"rar","package":"com.rarlab.rar","version":""}' > apps/apkpure/rar.json
+          echo '{"name":"spotify","package":"com.spotify.music","version":""}' > apps/apkpure/spotify.json
+          echo '{"name":"strava","package":"com.strava","version":""}' > apps/apkpure/strava.json
+          echo '{"name":"tumblr","package":"com.tumblr","version":""}' > apps/apkpure/tumblr.json
+          echo '{"name":"twitch","package":"tv.twitch.android.app","version":""}' > apps/apkpure/twitch.json
+          echo '{"name":"viber","package":"com.viber.voip","version":""}' > apps/apkpure/viber.json
+          
+          # Uptodown configs
+          echo '{"name":"disney-plus","package":"com.disney.disneyplus","version":""}' > apps/uptodown/disney-plus.json
+          echo '{"name":"facebook","package":"com.facebook.katana","version":""}' > apps/uptodown/facebook.json
+          echo '{"name":"duolingo","package":"com.duolingo","version":""}' > apps/uptodown/duolingo.json
+          echo '{"name":"google-news","package":"com.google.android.apps.magazines","version":""}' > apps/uptodown/google-news.json
+          echo '{"name":"messenger","package":"com.facebook.orca","version":""}' > apps/uptodown/messenger.json
+          echo '{"name":"lightroom","package":"com.adobe.lrmobile","version":""}' > apps/uptodown/lightroom.json
+          echo '{"name":"photomath","package":"com.microblink.photomath","version":""}' > apps/uptodown/photomath.json
+          echo '{"name":"pixiv","package":"jp.pxv.android","version":""}' > apps/uptodown/pixiv.json
+          echo '{"name":"prime-video","package":"com.amazon.avod.thirdpartyclient","version":""}' > apps/uptodown/prime-video.json
+          echo '{"name":"proton-mail","package":"ch.protonmail.android","version":""}' > apps/uptodown/proton-mail.json
+          echo '{"name":"proton-vpn","package":"ch.protonvpn.android","version":""}' > apps/uptodown/proton-vpn.json
+          echo '{"name":"rar","package":"com.rarlab.rar","version":""}' > apps/uptodown/rar.json
+          echo '{"name":"spotify","package":"com.spotify.music","version":""}' > apps/uptodown/spotify.json
+          echo '{"name":"strava","package":"com.strava","version":""}' > apps/uptodown/strava.json
+          echo '{"name":"tumblr","package":"com.tumblr","version":""}' > apps/uptodown/tumblr.json
+          echo '{"name":"twitch","package":"tv.twitch.android.app","version":""}' > apps/uptodown/twitch.json
+          echo '{"name":"viber","package":"com.viber.voip","version":""}' > apps/uptodown/viber.json
+          
+          echo "✅ Configs created for 17 apps"
+          ls -la apps/apkmirror/*.json apps/apkpure/*.json apps/uptodown/*.json | wc -l
+      
+      - name: Commit Configs
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add apps/
+          git commit -m "Add configs for 17 new apps" || echo "No changes to commit"
+          git push
