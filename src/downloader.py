@@ -41,7 +41,15 @@ def download_required(source: str) -> tuple[list[Path], str]:
     name = repos_info[0]["name"]
     downloaded_files = []
 
-    for repo_info in repos_info[1:]:
+    for repo_info in repos_info[1:]:  # Skip the first "name" entry
+        # --- NEW: Check for a direct URL first ---
+        if 'url' in repo_info:
+            # Download the resource directly from the provided URL
+            filepath = download_resource(repo_info['url'])
+            downloaded_files.append(filepath)
+            continue  # Skip the GitHub release logic for this entry
+        
+        # --- Original GitHub Release logic (keep this for other entries) ---
         user = repo_info['user']
         repo = repo_info['repo']
         tag = repo_info['tag']
