@@ -13,6 +13,7 @@
     { "app_name": "google-news", "source": "revanced" },
     { "app_name": "messenger", "source": "revanced" },
     { "app_name": "lightroom", "source": "revanced" },
+    { "app_name": "spotify", "source": "revanced" },
     { "app_name": "photomath", "source": "revanced" },
     { "app_name": "pixiv", "source": "revanced" },
     { "app_name": "prime-video", "source": "revanced" },
