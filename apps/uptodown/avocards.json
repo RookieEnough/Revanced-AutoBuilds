@@ -1,1 +1,5 @@
-{ "name": "avocards", "package": "", "version": "" }
+{
+    "name": "Avocards",
+    "package": "com.crunchyroll.crunchyroid",
+    "version": "com.avocards"
+}
