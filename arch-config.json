@@ -10,6 +10,11 @@
     "arches": ["arm64-v8a", "armeabi-v7a"]
   },
   {
+    "app_name": "cake",
+    "source": "custom-patches",
+    "arches": ["arm64-v8a", "armeabi-v7a"]
+  },
+  {
     "app_name": "messenger",
     "source": "revanced",
     "arches": ["arm64-v8a", "armeabi-v7a"]
