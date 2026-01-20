@@ -36,7 +36,14 @@
     { "app_name": "teuida", "source": "custom-patches" },
     { "app_name": "ttmik-stories", "source": "custom-patches" },
     { "app_name": "calistree", "source": "custom-patches" },
-    { "app_name": "webster", "source": "custom-patches" }
+    { "app_name": "webster", "source": "custom-patches" },
+    { "app_name": "chargeprice", "source": "brosssh" },
+    { "app_name": "mapy", "source": "brosssh" },
+    { "app_name": "telegram", "source": "aunali321" },
+    { "app_name": "park4night", "source": "brosssh" },
+    { "app_name": "komoot", "source": "brosssh" },
+    { "app_name": "hevy", "source": "brosssh" },
+    { "app_name": "geocaching", "source": "brosssh" },
     
   ]
 }
