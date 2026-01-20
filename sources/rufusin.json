@@ -1,0 +1,15 @@
+[
+    {
+      "name": "revanced-patches"
+    },
+    {
+      "user": "revanced",
+      "repo": "revanced-cli",
+      "tag": "latest"
+    },
+    {
+      "user": "rufusin",
+      "repo": "revanced-patches",
+      "tag": "latest"
+    }
+]
