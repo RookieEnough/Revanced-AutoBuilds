@@ -147,6 +147,7 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     patch_command = [
         "java", "-jar", str(revanced_cli),
         "patch", "-p", str(revanced_patches),  # Changed from --patches to -p
+        "-e", "Hide ADB",
         "--out", str(output_apk), str(input_apk),
         *exclude_patches, *include_patches
     ]
