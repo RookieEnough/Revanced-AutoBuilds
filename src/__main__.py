@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 from sys import exit
 from pathlib import Path
 from os import getenv
@@ -17,20 +16,7 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     download_files, name = downloader.download_required(source)
 
     revanced_cli = utils.find_file(download_files, 'revanced-cli', '.jar')
-    revanced_patches = next((f for f in download_files if f.suffix == '.rvp'), None)
-
-    # Detect patch version for logging purposes only
-    if revanced_patches:
-        version_match = re.search(r'(\d+\.\d+(\.\d+)?)', revanced_patches.name)
-        if version_match:
-            version_str = version_match.group(1)
-            major_version = int(version_str.split('.')[0])
-            if major_version >= 5:
-                logging.info(f"Patches v{version_str} detected — using CLI v5+ compatible syntax")
-            else:
-                logging.info(f"Patches v{version_str} detected")
-        else:
-            logging.warning("Could not parse patches version from filename")
+    revanced_patches = utils.find_file(download_files, 'patches', '.rvp')
 
     download_methods = [
         downloader.download_apkmirror,
@@ -41,29 +27,13 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     input_apk = None
     version = None
     for method in download_methods:
-        try:
-            input_apk, version = method(app_name, revanced_cli, revanced_patches)
-            if input_apk:
-                logging.info(f"✅ Successfully downloaded APK using {method.__name__}")
-                break
-        except FileNotFoundError as e:
-            logging.debug(f"{method.__name__} config not found: {e}")
-            continue
-        except Exception as e:
-            logging.warning(f"{method.__name__} failed: {e}")
-            continue
+        input_apk, version = method(app_name, revanced_cli, revanced_patches)
+        if input_apk:
+            break
             
     if input_apk is None:
         logging.error(f"❌ Failed to download APK for {app_name}")
-        logging.error("All download sources failed. This likely means:")
-        logging.error(f"  1. Missing config files in apps/apkmirror/, apps/apkpure/, or apps/uptodown/ for '{app_name}'")
-        logging.error(f"  2. The app '{app_name}' is not supported by this patch source")
-        logging.error(f"  3. Create config file: apps/{{platform}}/{app_name}.json with package and version info")
-        return None
-
-    # Additional safety check
-    if not isinstance(input_apk, Path):
-        logging.error(f"❌ Invalid APK path returned: {input_apk}")
+        logging.error("All download sources failed. Skipping this app.")
         return None
 
     if input_apk.suffix != ".apk":
@@ -142,19 +112,12 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     # Include architecture in output filename
     output_apk = Path(f"{app_name}-{arch}-patch-v{version}.apk")
 
-    # CRITICAL FIX: Use -p instead of --patches for CLI v5.0+
-    # The CLI v5.0+ uses -p flag, while v4.x used --patches
-    patch_command = [
+    utils.run_process([
         "java", "-jar", str(revanced_cli),
-        "patch", "-p", str(revanced_patches),  # Changed from --patches to -p
-        "-e", "Hide ADB",
+        "patch", "--patches", str(revanced_patches),
         "--out", str(output_apk), str(input_apk),
         *exclude_patches, *include_patches
-    ]
-    
-    logging.info(f"Running patch command with CLI v5+ syntax...")
-    
-    utils.run_process(patch_command, stream=True)
+    ], stream=True)
 
     input_apk.unlink(missing_ok=True)
 
@@ -224,13 +187,9 @@ def main():
                 print(f"✅ Built {arch} version: {Path(apk_path).name}")
         
         # Summary
-        if built_apks:
-            print(f"\n🎯 Built {len(built_apks)} APK(s) for {app_name}:")
-            for apk in built_apks:
-                print(f"  📱 {Path(apk).name}")
-        else:
-            print(f"\n❌ Failed to build any APKs for {app_name}")
-            exit(1)
+        print(f"\n🎯 Built {len(built_apks)} APK(s) for {app_name}:")
+        for apk in built_apks:
+            print(f"  📱 {Path(apk).name}")
         
     else:
         # Fallback to single universal build
@@ -238,9 +197,6 @@ def main():
         apk_path = run_build(app_name, source, "universal")
         if apk_path:
             print(f"🎯 Final APK path: {apk_path}")
-        else:
-            logging.error("Build failed")
-            exit(1)
 
 if __name__ == "__main__":
     main()
