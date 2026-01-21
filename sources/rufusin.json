@@ -1,15 +1,4 @@
-[
-  {
-    "name": "revanced-patches"
-  },
-  {
-    "user": "revanced",
-    "repo": "revanced-cli",
-    "tag": "latest"
-  },
-  {
-    "user": "rufusin",
-    "repo": "revanced-patches",
-    "tag": "latest"
-  }
-]
+{
+  "name": "rufusin-bundle",
+  "bundle_url": "https://raw.githubusercontent.com/Jman-Github/ReVanced-Patch-Bundles/bundles/patch-bundles/rufusin-patch-bundles/rufusin-latest-patches-bundle.json"
+}
