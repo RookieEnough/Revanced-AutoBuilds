@@ -43,7 +43,7 @@
     { "app_name": "park4night", "source": "brosssh" },
     { "app_name": "komoot", "source": "brosssh" },
     { "app_name": "hevy", "source": "brosssh" },
-    { "app_name": "geocaching", "source": "brosssh" },
+    { "app_name": "geocaching", "source": "brosssh" }
     
   ]
 }
