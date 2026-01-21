@@ -19,7 +19,7 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     revanced_cli = utils.find_file(download_files, 'revanced-cli', '.jar')
     revanced_patches = next((f for f in download_files if f.suffix == '.rvp'), None)
 
-        # --- Automatic CLI switch for newer patches ---
+    # --- Automatic CLI switch for newer patches ---
     if revanced_patches:
         # Parse version from filename (e.g., "5.47.0" from "patches-5.47.0-ample.2.rvp")
         version_match = re.search(r'(\d+\.\d+(\.\d+)?)', revanced_patches.name)
@@ -27,16 +27,16 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
             version_str = version_match.group(1)
             major_version = int(version_str.split('.')[0])
             if major_version >= 5:
-                logging.info(f"Newer patches v{version_str} detected – downloading compatible community CLI...")
+                logging.info(f"Newer patches v{version_str} detected — downloading compatible community CLI...")
                 # Community fork with updated libraries for v5+ patches (widely used in auto-builds)
-                newer_cli_url = "https://github.com/j-hc/revanced-cli/releases/download/v5.0.0/revanced-cli-5.0.0-all.jar"
+                newer_cli_url = "https://github.com/j-hc/revanced-cli/releases/download/v5.0.0/revanced-cli-all.jar"
                 revanced_cli = downloader.download_resource(newer_cli_url, "revanced-cli-community.jar")
                 logging.info("Switched to community CLI for better compatibility")
             else:
-                logging.info(f"Older patches v{version_str} detected – using standard CLI")
+                logging.info(f"Older patches v{version_str} detected — using standard CLI")
                 # Keep your original CLI
         else:
-            logging.warning("Could not parse patches version – using standard CLI")
+            logging.warning("Could not parse patches version — using standard CLI")
 
     download_methods = [
         downloader.download_apkmirror,
@@ -47,13 +47,29 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     input_apk = None
     version = None
     for method in download_methods:
-        input_apk, version = method(app_name, revanced_cli, revanced_patches)
-        if input_apk:
-            break
+        try:
+            input_apk, version = method(app_name, revanced_cli, revanced_patches)
+            if input_apk:
+                logging.info(f"✅ Successfully downloaded APK using {method.__name__}")
+                break
+        except FileNotFoundError as e:
+            logging.debug(f"{method.__name__} config not found: {e}")
+            continue
+        except Exception as e:
+            logging.warning(f"{method.__name__} failed: {e}")
+            continue
             
     if input_apk is None:
         logging.error(f"❌ Failed to download APK for {app_name}")
-        logging.error("All download sources failed. Skipping this app.")
+        logging.error("All download sources failed. This likely means:")
+        logging.error(f"  1. Missing config files in apps/apkmirror/, apps/apkpure/, or apps/uptodown/ for '{app_name}'")
+        logging.error(f"  2. The app '{app_name}' is not supported by this patch source")
+        logging.error(f"  3. Create config file: apps/{{platform}}/{app_name}.json with package and version info")
+        return None
+
+    # Additional safety check
+    if not isinstance(input_apk, Path):
+        logging.error(f"❌ Invalid APK path returned: {input_apk}")
         return None
 
     if input_apk.suffix != ".apk":
@@ -132,12 +148,17 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     # Include architecture in output filename
     output_apk = Path(f"{app_name}-{arch}-patch-v{version}.apk")
 
-    utils.run_process([
+    # CRITICAL FIX: Use -p instead of --patches for CLI v5.0+
+    patch_command = [
         "java", "-jar", str(revanced_cli),
-        "patch", "--patches", str(revanced_patches),
+        "patch", "-p", str(revanced_patches),  # Changed from --patches to -p
         "--out", str(output_apk), str(input_apk),
         *exclude_patches, *include_patches
-    ], stream=True)
+    ]
+    
+    logging.info(f"Running patch command: {' '.join(str(x) for x in patch_command)}")
+    
+    utils.run_process(patch_command, stream=True)
 
     input_apk.unlink(missing_ok=True)
 
@@ -207,9 +228,13 @@ def main():
                 print(f"✅ Built {arch} version: {Path(apk_path).name}")
         
         # Summary
-        print(f"\n🎯 Built {len(built_apks)} APK(s) for {app_name}:")
-        for apk in built_apks:
-            print(f"  📱 {Path(apk).name}")
+        if built_apks:
+            print(f"\n🎯 Built {len(built_apks)} APK(s) for {app_name}:")
+            for apk in built_apks:
+                print(f"  📱 {Path(apk).name}")
+        else:
+            print(f"\n❌ Failed to build any APKs for {app_name}")
+            exit(1)
         
     else:
         # Fallback to single universal build
@@ -217,6 +242,9 @@ def main():
         apk_path = run_build(app_name, source, "universal")
         if apk_path:
             print(f"🎯 Final APK path: {apk_path}")
+        else:
+            logging.error("Build failed")
+            exit(1)
 
 if __name__ == "__main__":
     main()
