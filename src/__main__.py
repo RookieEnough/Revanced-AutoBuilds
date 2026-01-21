@@ -29,7 +29,7 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
             if major_version >= 5:
                 logging.info(f"Newer patches v{version_str} detected – downloading compatible community CLI...")
                 # Community fork with updated libraries for v5+ patches (widely used in auto-builds)
-                newer_cli_url = "https://github.com/j-hc/revanced-cli/releases/tag/v5.0.0/revanced-cli-all.jar"
+                newer_cli_url = "https://github.com/j-hc/revanced-cli/releases/download/v5.0.0/revanced-cli-5.0.0-all.jar"
                 revanced_cli = downloader.download_resource(newer_cli_url, "revanced-cli-community.jar")
                 logging.info("Switched to community CLI for better compatibility")
             else:
