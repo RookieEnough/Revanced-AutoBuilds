@@ -6,7 +6,7 @@ from src import (
     apkpure,
     session,
     uptodown,
-    aptoide
+    aptoide,
     apkmirror
 )
 
