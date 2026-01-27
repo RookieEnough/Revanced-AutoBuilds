@@ -1,6 +1,6 @@
 [
     {
-      "name": "custom-patches"
+      "name": "morphe-patches"
     },
     {
       "user": "revanced",
@@ -9,7 +9,7 @@
     },
     {
       "user": "hoo-dles",
-      "repo": "revanced-custom-patches",
+      "repo": "morphe-patches",
       "tag": "latest"
     }
 ]
