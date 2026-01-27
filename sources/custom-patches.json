@@ -1,15 +1,15 @@
 [
     {
-      "name": "morphe-patches"
+      "name": "custom-patches"
     },
     {
-      "user": "MorpheApp",
-      "repo": "morphe-cli",
+      "user": "revanced",
+      "repo": "revanced-cli",
       "tag": "latest"
     },
     {
       "user": "hoo-dles",
-      "repo": "morphe-patches",
+      "repo": "revanced-custom-patches",
       "tag": "latest"
     }
 ]
