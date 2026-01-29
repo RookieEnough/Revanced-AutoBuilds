@@ -39,6 +39,11 @@ def download_required(source: str) -> tuple[list[Path], str]:
     with source_path.open() as json_file:
         repos_info = json.load(json_file)
 
+    # Handle bundle format
+    if isinstance(repos_info, dict) and "bundle_url" in repos_info:
+        return download_from_bundle(repos_info)
+    
+    # Handle old list format
     name = repos_info[0]["name"]
     downloaded_files = []
 
@@ -48,12 +53,74 @@ def download_required(source: str) -> tuple[list[Path], str]:
         tag = repo_info['tag']
 
         release = utils.detect_github_release(user, repo, tag)
-        for asset in release["assets"]:
+        
+        # Special handling for Morphe files
+        if repo == "morphe-patches" or repo == "morphe-cli":
+            for asset in release["assets"]:
+                if asset["name"].endswith(".asc"):
+                    continue
+                # Download .mpp patches or morphe-cli.jar
+                if asset["name"].endswith(".mpp") or ("morphe-cli" in asset["name"] and asset["name"].endswith(".jar")):
+                    filepath = download_resource(asset["browser_download_url"])
+                    downloaded_files.append(filepath)
+        else:
+            # Original logic for ReVanced files
+            for asset in release["assets"]:
+                if asset["name"].endswith(".asc"):
+                    continue
+                filepath = download_resource(asset["browser_download_url"])
+                downloaded_files.append(filepath)
+
+    return downloaded_files, name
+
+def download_from_bundle(bundle_info: dict) -> tuple[list[Path], str]:
+    """Download resources from a bundle URL"""
+    bundle_url = bundle_info["bundle_url"]
+    name = bundle_info.get("name", "bundle-patches")
+    
+    logging.info(f"Downloading bundle from {bundle_url}")
+    
+    # Download the bundle JSON
+    with session.get(bundle_url) as res:
+        res.raise_for_status()
+        bundle_data = res.json()
+    
+    downloaded_files = []
+    
+    # Check API version and structure
+    if "patches" in bundle_data:
+        # API v4 format
+        patches = bundle_data.get("patches", [])
+        integrations = bundle_data.get("integrations", [])
+        
+        # Download patches (JAR files)
+        for patch in patches:
+            if "url" in patch:
+                filepath = download_resource(patch["url"])
+                downloaded_files.append(filepath)
+                logging.info(f"Downloaded patch: {patch.get('name', 'unknown')}")
+        
+        # Download integrations (APK files)
+        for integration in integrations:
+            if "url" in integration:
+                filepath = download_resource(integration["url"])
+                downloaded_files.append(filepath)
+                logging.info(f"Downloaded integration: {integration.get('name', 'unknown')}")
+    
+    # Also download CLI (still needed) - try ReVanced CLI first
+    try:
+        cli_release = utils.detect_github_release("revanced", "revanced-cli", "latest")
+        for asset in cli_release["assets"]:
             if asset["name"].endswith(".asc"):
                 continue
-            filepath = download_resource(asset["browser_download_url"])
-            downloaded_files.append(filepath)
-
+            if asset["name"].endswith(".jar") and "cli" in asset["name"].lower():
+                filepath = download_resource(asset["browser_download_url"])
+                downloaded_files.append(filepath)
+                logging.info("Downloaded ReVanced CLI")
+                break
+    except Exception as e:
+        logging.warning(f"Could not download ReVanced CLI: {e}")
+    
     return downloaded_files, name
 
 def download_platform(app_name: str, platform: str, cli: str, patches: str, arch: str = None) -> tuple[Path | None, str | None]:
