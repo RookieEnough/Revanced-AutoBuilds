@@ -1,7 +1,7 @@
 {
     "org": "kakao-corp",
     "name": "kakaotalk",
-    "type": "APK", 
+    "type": "apkm", 
     "arch": "arm64-v8a + arm-v7a",
     "dpi": "120-640dpi",
     "package" : "com.kakao.talk",
