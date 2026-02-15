@@ -1,13 +1,42 @@
 import re
 import logging
-import cgi
-import json
-from typing import List, Optional, Union
+from typing import List, Optional
 from src import gh
 from sys import exit
 import subprocess
 from pathlib import Path
 from urllib.parse import urlparse, unquote, parse_qs
+
+def _parseparam(s):
+    while s[:1] == ";":
+        s = s[1:]
+        end = s.find(";")
+        while end > 0 and (s.count('"', 0, end) - s.count('\\"', 0, end)) % 2:
+            end = s.find(";", end + 1)
+        if end < 0:
+            end = len(s)
+        f = s[:end]
+        yield f.strip()
+        s = s[end:]
+
+
+def parse_header(line):
+    """Parse a Content-type like header.
+    Return the main content-type and a dictionary of options.
+    """
+    parts = _parseparam(";" + line)
+    key = parts.__next__()
+    pdict = {}
+    for p in parts:
+        i = p.find("=")
+        if i >= 0:
+            name = p[:i].strip().lower()
+            value = p[i + 1 :].strip()
+            if len(value) >= 2 and value[0] == value[-1] == '"':
+                value = value[1:-1]
+                value = value.replace("\\\\", "\\").replace('\\"', '"')
+            pdict[name] = value
+    return key, pdict
 
 def find_file(files: list[Path], prefix: str = None, suffix: str = None, contains: str = None, exclude: list = None) -> Path | None:
     """Find a file with various matching criteria"""
@@ -165,7 +194,7 @@ def get_supported_version(package_name: str, cli: str, patches: str) -> Optional
 def extract_filename(response, fallback_url=None) -> str:
     cd = response.headers.get('content-disposition')
     if cd:
-        _, params = cgi.parse_header(cd)
+        _, params = parse_header(cd)
         filename = params.get('filename') or params.get('filename*')
         if filename:
             return unquote(filename)
@@ -174,7 +203,7 @@ def extract_filename(response, fallback_url=None) -> str:
     query_params = parse_qs(parsed.query)
     rcd = query_params.get('response-content-disposition')
     if rcd:
-        _, params = cgi.parse_header(unquote(rcd[0]))
+        _, params = parse_header(unquote(rcd[0]))
         filename = params.get('filename') or params.get('filename*')
         if filename:
             return unquote(filename)

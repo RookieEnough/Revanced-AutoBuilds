@@ -11,26 +11,26 @@ from src import (
 )
 
 def download_resource(url: str, name: str = None) -> Path:
-    with session.get(url, stream=True) as res:
-        res.raise_for_status()
-        final_url = res.url
+    res = session.get(url, stream=True)
+    res.raise_for_status()
+    final_url = res.url
 
-        if not name:
-            name = utils.extract_filename(res, fallback_url=final_url)
+    if not name:
+        name = utils.extract_filename(res, fallback_url=final_url)
 
-        filepath = Path(name)
-        total_size = int(res.headers.get('content-length', 0))
-        downloaded_size = 0
+    filepath = Path(name)
+    total_size = int(res.headers.get('content-length', 0))
+    downloaded_size = 0
 
-        with filepath.open("wb") as file:
-            for chunk in res.iter_content(chunk_size=8192):
-                if chunk:
-                    file.write(chunk)
-                    downloaded_size += len(chunk)
+    with filepath.open("wb") as file:
+        for chunk in res.iter_content(chunk_size=8192):
+            if chunk:
+                file.write(chunk)
+                downloaded_size += len(chunk)
 
-        logging.info(
-            f"URL: {final_url} [{downloaded_size}/{total_size}] -> \"{filepath}\" [1]"
-        )
+    logging.info(
+        f"URL: {final_url} [{downloaded_size}/{total_size}] -> \"{filepath}\" [1]"
+    )
 
     return filepath
 
