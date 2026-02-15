@@ -1,67 +1,10 @@
 import os
 import logging
-import random
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.impersonate import DEFAULT_CHROME
 from github import Github
 
-# --- Auto Generate User-Agent ---
-os_platforms = {
-    "Windows": [
-        "Windows NT 10.0; Win64; x64",
-        "Windows NT 11.0; Win64; x64",
-        "Windows NT 10.0; WOW64"
-    ],
-    "macOS": [
-        "Macintosh; Intel Mac OS X 13_5",
-        "Macintosh; Apple M1 Mac OS X 13_5"
-    ],
-    "Linux": [
-        "X11; Linux x86_64",
-        "X11; Ubuntu; Linux x86_64"
-    ]
-}
-
-browser_by_os = {
-    "Windows": ["Chrome", "Firefox", "Edge", "Opera", "Vivaldi", "Brave"],
-    "macOS": ["Chrome", "Firefox", "Safari", "Brave"],
-    "Linux": ["Chrome", "Firefox", "Vivaldi", "Brave"]
-}
-
-browser_templates = {
-    "Chrome": "Mozilla/5.0 ({platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ver} Safari/537.36",
-    "Edge": "Mozilla/5.0 ({platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ver} Safari/537.36 Edg/{ver}",
-    "Opera": "Mozilla/5.0 ({platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ver} Safari/537.36 OPR/{ver}",
-    "Vivaldi": "Mozilla/5.0 ({platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ver} Safari/537.36 Vivaldi/{ver}",
-    "Brave": "Mozilla/5.0 ({platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ver} Safari/537.36 Brave/{ver}",
-    "Firefox": "Mozilla/5.0 ({platform}; rv:{ver}) Gecko/20100101 Firefox/{ver}",
-    "Safari": "Mozilla/5.0 ({platform}) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{ver} Mobile/15E148 Safari/604.1"
-}
-
-
-def random_version(browser):
-    if browser in ["Chrome", "Edge", "Opera", "Vivaldi", "Brave"]:
-        return f"{random.randint(120, 126)}.0.{random.randint(6000, 6399)}.{random.randint(50, 99)}"
-    elif "Firefox" in browser:
-        return f"{random.randint(122, 126)}.{random.randint(0, 9)}"
-    elif browser == "Safari":
-        return f"{random.randint(16, 17)}.{random.randint(0, 6)}"
-    else:
-        return "1.0"
-
-
-def generate_user_agent():
-    os_name = random.choice(list(os_platforms.keys()))
-    platform = random.choice(os_platforms[os_name])
-    browser = random.choice(browser_by_os[os_name])
-    version = random_version(browser)
-    template = browser_templates[browser]
-    return template.format(platform=platform, ver=version)
-
-# --- Requests Session with Random User-Agent ---
-session = requests.Session()
-session.headers.update({
-    'User-Agent': generate_user_agent()
-})
+session = requests.Session(impersonate=DEFAULT_CHROME)
 
 # Logging
 logging.basicConfig(

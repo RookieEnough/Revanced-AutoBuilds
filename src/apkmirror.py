@@ -2,7 +2,9 @@ import re
 import json
 import logging
 from bs4 import BeautifulSoup
-from src import base_url, session
+from src import session
+
+base_url = "https://www.apkmirror.com"
 
 def get_download_link(version: str, app_name: str, config: dict, arch: str = None) -> str: 
     target_arch = arch if arch else config.get('arch', 'universal')
