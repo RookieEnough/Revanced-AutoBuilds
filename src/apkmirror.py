@@ -3,7 +3,6 @@ import logging
 import time
 import random
 import cloudscraper
-from bs4 import BeautifulSoup
 
 APKMIRROR_BASE = "https://www.apkmirror.com"
 
@@ -36,7 +35,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     version_dash = version.replace('.', '-').lower()
     release_name = config.get('release_prefix', config['name'])
 
-    # Load release page
+    # Load release page (only to confirm existence)
     release_url = f"{APKMIRROR_BASE}/apk/{config['org']}/{config['name']}/{release_name}-{version_dash}-release/"
     logging.info(f"Loading release page: {release_url}")
     time.sleep(3 + random.random())
@@ -50,7 +49,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
         logging.error(f"Release page failed: {e}")
         return None
 
-    # Generate variant page
+    # Generate variant page URL
     variant_map = {
         "arm64-v8a": "3",
         "armeabi-v7a": "4",
@@ -61,44 +60,25 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     variant_url = f"{release_url.rstrip('/')}/{release_name}-{version_dash}-{suffix}-android-apk-download/"
     logging.info(f"Generated variant page for {target_arch}: {variant_url}")
 
-    # Load variant page and extract the EXACT final button with key (matches your screenshot and copied link)
+    # Load variant page and extract the full final download link with ?key=...&forcebaseapk=true using RAW REGEX on page source (NO BUTTON, NO TAG FINDING)
     try:
         time.sleep(3 + random.random())
         response = scraper.get(variant_url)
         response.encoding = 'utf-8'
         response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
 
-        logging.debug(f"Variant page title: {soup.find('title').get_text() if soup.find('title') else 'No title'}")
-
-        # Exact match for the red button in your screenshot
-        btn = None
-        for a in soup.find_all('a', href=True):
-            href = a['href']
-            text = a.get_text().strip().upper()
-            if ('forcebaseapk=true' in href or 'download/?key=' in href) and 'download apk' in text:
-                btn = a
-                logging.info(f"Found button: text='{text}', href contains key & forcebaseapk=true")
-                break
-
-        if btn and btn.get('href'):
-            final_url = APKMIRROR_BASE + btn['href']
-            logging.info(f"✅ SUCCESS - Final APK download URL: {final_url}")
+        # RAW REGEX on the entire page source - finds the exact href you copied
+        match = re.search(r'href="([^"]*?forcebaseapk=true[^"]*?)"', response.text)
+        if match:
+            final_href = match.group(1)
+            final_url = APKMIRROR_BASE + final_href
+            logging.info(f"✅ SUCCESS - Final APK download URL (extracted via regex): {final_url}")
             return final_url
-
-        # Backup scan (if button text is slightly different)
-        for a in soup.find_all('a', href=True):
-            if 'forcebaseapk=true' in a['href'] and 'download/?key=' in a['href']:
-                final_url = APKMIRROR_BASE + a['href']
-                logging.info(f"✅ SUCCESS (backup) - Final APK download URL: {final_url}")
-                return final_url
-
-        logging.error("Button not found. Dumping all links on variant page:")
-        for a in soup.find_all('a', href=True)[:30]:
-            logging.debug(f"Link: {a.get('href')} | Text: {a.get_text().strip()[:80]}")
+        else:
+            logging.error("No final download link found in page source")
 
     except Exception as e:
-        logging.error(f"Variant page or button failed: {e}")
+        logging.error(f"Variant page load failed: {e}")
 
     logging.error("All methods failed")
     return None
