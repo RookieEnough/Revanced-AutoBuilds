@@ -3,6 +3,7 @@ import logging
 import time
 import random
 import cloudscraper
+from bs4 import BeautifulSoup
 
 APKMIRROR_BASE = "https://www.apkmirror.com"
 
@@ -35,7 +36,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     version_dash = version.replace('.', '-').lower()
     release_name = config.get('release_prefix', config['name'])
 
-    # 1. Release page (just to confirm it exists)
+    # Load release page (just to confirm)
     release_url = f"{APKMIRROR_BASE}/apk/{config['org']}/{config['name']}/{release_name}-{version_dash}-release/"
     logging.info(f"Loading release page: {release_url}")
     time.sleep(3 + random.random())
@@ -49,7 +50,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
         logging.error(f"Release page failed: {e}")
         return None
 
-    # 2. Generate variant page
+    # Generate variant page
     variant_map = {
         "arm64-v8a": "3",
         "armeabi-v7a": "4",
@@ -60,10 +61,40 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     variant_url = f"{release_url.rstrip('/')}/{release_name}-{version_dash}-{suffix}-android-apk-download/"
     logging.info(f"Generated variant page for {target_arch}: {variant_url}")
 
-    # 3. DIRECT FINAL DOWNLOAD URL CONSTRUCTION (the out-of-the-box solution you asked for)
-    final_url = f"{variant_url.rstrip('/')}/download/?forcebaseapk=true"
-    logging.info(f"✅ Constructed final APK download URL: {final_url}")
-    return final_url   # Return immediately - no button scraping
+    # Load variant page and extract the REAL button with forcebaseapk=true (your copied link)
+    try:
+        time.sleep(3 + random.random())
+        response = scraper.get(variant_url)
+        response.encoding = 'utf-8'
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        logging.debug(f"Variant page title: {soup.find('title').get_text() if soup.find('title') else 'No title'}")
+
+        # GOD-CODER BUTTON FINDER - finds the exact button in your screenshot
+        btn = None
+        for a in soup.find_all('a', href=True):
+            href = a['href'].lower()
+            text = a.get_text().strip().upper()
+            if 'forcebaseapk=true' in href or 'download/?key=' in href or 'download apk' in text:
+                btn = a
+                logging.info(f"Found download button (text: '{text[:50]}', href contains forcebaseapk=true)")
+                break
+
+        if btn and btn.get('href'):
+            final_url = APKMIRROR_BASE + btn['href']
+            logging.info(f"✅ SUCCESS - Final APK download URL: {final_url}")
+            return final_url
+        else:
+            logging.error("Button not found. Dumping all links on variant page:")
+            for a in soup.find_all('a', href=True)[:30]:
+                logging.debug(f"Link: {a.get('href')} | Text: {a.get_text().strip()[:80]}")
+
+    except Exception as e:
+        logging.error(f"Variant page failed: {e}")
+
+    logging.error("All methods failed")
+    return None
 
 def get_architecture_criteria(arch: str) -> dict:
     return {"arm64-v8a": "arm64-v8a", "armeabi-v7a": "armeabi-v7a", "universal": "universal"}.get(arch, "universal")
