@@ -4,6 +4,7 @@ import time
 import random
 import cloudscraper
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
 APKMIRROR_BASE = "https://www.apkmirror.com"
 
@@ -36,18 +37,58 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     version_dash = version.replace('.', '-').lower()
     release_name = config.get('release_prefix', config['name'])
 
-    # Load release page (just to confirm)
+    # 1. Release page (base URL)
     release_url = f"{APKMIRROR_BASE}/apk/{config['org']}/{config['name']}/{release_name}-{version_dash}-release/"
-    logging.info(f"Loading release page: {release_url}")
-    time.sleep(3 + random.random())
+    
+    # 2. Variant Page Construction
+    # NOTE: Hardcoding suffix IDs (3, 4, 5...) is risky as they can change based on upload order.
+    # ideally, you should scrape the release_url to find the correct variant link for your arch.
+    # keeping your logic for now:
+    variant_map = {
+        "arm64-v8a": "3",
+        "armeabi-v7a": "4",
+        "x86": "5",
+        "x86_64": "6"
+    }
+    suffix = variant_map.get(target_arch, "3")
+    variant_url = f"{release_url.rstrip('/')}/{release_name}-{version_dash}-{suffix}-android-apk-download/"
+    
+    # 3. SCRAPE THE DOWNLOAD PAGE (The Missing Step)
+    # We must visit the page that says "Your download will start immediately..." to get the key.
+    download_landing_url = f"{variant_url.rstrip('/')}/download/"
+    logging.info(f"Loading download landing page: {download_landing_url}")
+    time.sleep(3 + random.random()) # Be gentle
 
     try:
-        response = scraper.get(release_url)
+        response = scraper.get(download_landing_url)
         response.encoding = 'utf-8'
         response.raise_for_status()
-        logging.info(f"✓ Release page loaded")
+        
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        # Look for the anchor tag that contains the download key
+        # Usually inside a paragraph saying "If not, please click here"
+        # The link usually looks like: /apk/.../download/?key=...
+        download_link_tag = soup.find("a", href=lambda h: h and "key=" in h)
+
+        if download_link_tag:
+            href = download_link_tag['href']
+            final_url = urljoin(APKMIRROR_BASE, href)
+            
+            # Ensure forcebaseapk is present if you specifically need it
+            if "forcebaseapk=true" not in final_url:
+                final_url += "&forcebaseapk=true"
+                
+            logging.info(f"✅ Found secure download link: {final_url}")
+            return final_url
+        else:
+            logging.error("Could not find the secure link (key) in the response.")
+            # Debugging: Save html to inspect if needed
+            # with open("debug_fail.html", "w", encoding="utf-8") as f: f.write(response.text)
+            return None
+
     except Exception as e:
-        logging.error(f"Release page failed: {e}")
+        logging.error(f"Failed to get download key: {e}")
         return None
 
     # Generate variant page
