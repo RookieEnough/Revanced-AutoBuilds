@@ -79,18 +79,14 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
             
             try:
                 response = scraper.get(url)
+                response.encoding = 'utf-8'  # Force UTF-8 encoding
                 if response.status_code == 200:
-                    soup = BeautifulSoup(response.content, "html.parser")
+                    soup = BeautifulSoup(response.text, "html.parser")  # Use response.text for proper decoding
                     page_text = soup.get_text()
                     
                     # VALIDATION: Check if this page is for our EXACT version
-                    # Check multiple possible version formats
-                    version_checks = [
-                        version, # 26.1.2.0
-                        version.replace('.', '-'), # 26-1-2-0
-                        current_ver_str, # 26-1-2 (if stripped)
-                        ".".join(version_parts[:i]) # 26.1.2 (if stripped)
-                    ]
+                    # Prioritize full version matches
+                    full_version_checks = [version, version.replace('.', '-')]
                     
                     # Also check page title and headings for version
                     title_tag = soup.find('title')
@@ -98,11 +94,21 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
                     
                     title_text = title_tag.get_text() if title_tag else ""
                     
-                    # Less stringent check: Any match in text, title, or headings
+                    # Stricter check: Require full version in title or headings
                     is_correct_page = any(
-                        any(check in src for check in version_checks if check)
-                        for src in [page_text, title_text] + [h.get_text() for h in headings]
+                        any(check in src for check in full_version_checks)
+                        for src in [title_text] + [h.get_text() for h in headings]
                     )
+                    
+                    # Fallback to partial if no full match, but log
+                    if not is_correct_page:
+                        partial_checks = [current_ver_str, ".".join(version_parts[:i])]
+                        is_correct_page = any(
+                            any(check in src for check in partial_checks if check)
+                            for src in [page_text, title_text] + [h.get_text() for h in headings]
+                        )
+                        if is_correct_page:
+                            logging.warning("Fallback to partial version match")
                     
                     if is_correct_page:
                         content_size = len(response.content)
@@ -146,7 +152,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     
     # Try to find exact version match first
     for row in rows:
-        row_text = row.get_text()
+        row_text = row.get_text().strip()
         
         # Check if row contains our exact version
         if version in row_text or version.replace('.', '-') in row_text:
@@ -160,7 +166,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     # If exact version not found, try to find any variant matching criteria
     if not download_page_url:
         for row in rows:
-            row_text = row.get_text()
+            row_text = row.get_text().strip()
             if all(criterion in row_text for criterion in criteria):
                 # Check if this looks like a variant row (has version numbers)
                 if re.search(r'\d+(\.\d+)+', row_text):
@@ -188,10 +194,11 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
         time.sleep(1 + random.random())
         
         response = scraper.get(download_page_url)
+        response.encoding = 'utf-8'
         response.raise_for_status()
         content_size = len(response.content)
         logging.info(f"URL:{response.url} [{content_size}/{content_size}] -> Variant Page")
-        soup = BeautifulSoup(response.content, "html.parser")
+        soup = BeautifulSoup(response.text, "html.parser")
         sub_url = soup.find('a', class_='downloadButton')
         if sub_url:
             final_download_page_url = APKMIRROR_BASE + sub_url['href']
@@ -200,10 +207,11 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
             time.sleep(1 + random.random())
             
             response = scraper.get(final_download_page_url)
+            response.encoding = 'utf-8'
             response.raise_for_status()
             content_size = len(response.content)
             logging.info(f"URL:{response.url} [{content_size}/{content_size}] -> Download Page")
-            soup = BeautifulSoup(response.content, "html.parser")
+            soup = BeautifulSoup(response.text, "html.parser")
             button = soup.find('a', id='download-link')
             if not button:
                 button = soup.find('a', href=lambda h: h and 'download/' in h and 'forcebaseapk' in h)
@@ -236,8 +244,9 @@ def get_latest_version(app_name: str, config: dict, scraper=None) -> str:
         time.sleep(1 + random.random())
         
         response = scraper.get(main_url)
+        response.encoding = 'utf-8'
         if response.status_code == 200:
-            soup = BeautifulSoup(response.content, "html.parser")
+            soup = BeautifulSoup(response.text, "html.parser")
             # Try to find version in the page
             version_elem = soup.find('span', string=re.compile(r'\d+\.\d+'))
             if version_elem:
@@ -255,10 +264,11 @@ def get_latest_version(app_name: str, config: dict, scraper=None) -> str:
     time.sleep(1 + random.random())
     
     response = scraper.get(url)
+    response.encoding = 'utf-8'
     response.raise_for_status()
     content_size = len(response.content)
     logging.info(f"URL:{response.url} [{content_size}/{content_size}] -> \"-\" [1]")
-    soup = BeautifulSoup(response.content, "html.parser")
+    soup = BeautifulSoup(response.text, "html.parser")
     app_rows = soup.find_all("div", class_="appRow")
     version_pattern = re.compile(r'\d+(\.\d+)*(-[a-zA-Z0-9]+(\.\d+)*)*')
     for row in app_rows:
