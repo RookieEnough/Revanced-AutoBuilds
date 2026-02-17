@@ -37,14 +37,14 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
         scraper = create_scraper_session()
     
     target_arch = arch if arch else config.get('arch', 'universal')
-    criteria = [target_arch, config['dpi']]
-    if 'type' in config:
-        criteria.append(config['type'])
+    criteria = [target_arch, config['dpi']]  # Do not include 'type' as it's not consistently in row text
     
     # First, try to find the exact release page URL from the uploads page
     uploads_url = f"{APKMIRROR_BASE}/uploads/?appcategory={config['name']}"
     logging.info(f"Fetching uploads page to find exact release URL: {uploads_url}")
-    time.sleep(1 + random.random())
+    time.sleep(2 + random.random())  # Increased delay
+    found_soup = None
+    correct_version_page = False
     try:
         response = scraper.get(uploads_url)
         response.encoding = 'utf-8'
@@ -63,8 +63,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
                         if link_elem:
                             release_url = APKMIRROR_BASE + link_elem['href']
                             logging.info(f"Found exact release page from uploads: {release_url}")
-                            # Now parse this release page for variants
-                            time.sleep(1 + random.random())
+                            time.sleep(2 + random.random())
                             rel_response = scraper.get(release_url)
                             rel_response.encoding = 'utf-8'
                             if rel_response.status_code == 200:
@@ -112,25 +111,24 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
                 logging.info(f"Checking potential release URL: {url}")
                 
                 # Add randomized delay to avoid rate-limiting
-                time.sleep(1 + random.random())  # 1-2 seconds
+                time.sleep(2 + random.random())
                 
                 try:
                     response = scraper.get(url)
                     response.encoding = 'utf-8'
                     if response.status_code == 200:
                         soup = BeautifulSoup(response.text, "html.parser")
-                        page_text = soup.get_text()
+                        page_text = soup.get_text().lower()  # Lowercase for case-insensitive match
                         
                         # VALIDATION: Check if this page is for our EXACT version
-                        # Prioritize full version matches
-                        full_version_checks = [version, version.replace('.', '-')]
+                        full_version_checks = [version.lower(), version.replace('.', '-').lower()]
                         
                         # Also check page title and headings for version
                         title_tag = soup.find('title')
                         headings = soup.find_all(['h1', 'h2', 'h3'])
                         
-                        title_text = title_tag.get_text().strip() if title_tag else ""
-                        heading_texts = [h.get_text().strip() for h in headings]
+                        title_text = title_tag.get_text().strip().lower() if title_tag else ""
+                        heading_texts = [h.get_text().strip().lower() for h in headings]
                         
                         # Stricter check: Require full version in title, headings, or page_text
                         sources = [page_text] + [title_text] + heading_texts
@@ -138,9 +136,14 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
                             check in src for src in sources for check in full_version_checks
                         )
                         
+                        # Workaround: If the full version string is in the URL itself, force accept if status 200
+                        if not is_correct_page and version.replace('.', '-').lower() in url.lower():
+                            is_correct_page = True
+                            logging.warning(f"Forcing acceptance based on URL containing version: {url}")
+                        
                         # Fallback to partial if no full match, but log
                         if not is_correct_page:
-                            partial_checks = [current_ver_str, ".".join(version_parts[:i])]
+                            partial_checks = [current_ver_str.lower(), ".".join(version_parts[:i]).lower()]
                             is_correct_page = any(
                                 check in src for src in sources for check in partial_checks if check
                             )
@@ -152,8 +155,8 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
                         logging.debug(f"Headings: {heading_texts}")
                         logging.debug(f"Full checks: {full_version_checks}")
                         logging.debug(f"Partial checks: {partial_checks}")
-                        logging.debug(f"Version '{version}' in title: {version in title_text}")
-                        logging.debug(f"Version '{version.replace('.', '-')}' in title: {version.replace('.', '-') in title_text}")
+                        logging.debug(f"Version '{version.lower()}' in title: {version.lower() in title_text}")
+                        logging.debug(f"Version '{version.replace('.', '-').lower()}' in title: {version.replace('.', '-').lower() in title_text}")
                         
                         if is_correct_page:
                             content_size = len(response.content)
@@ -197,13 +200,13 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     
     # Try to find exact version match first
     for row in rows:
-        row_text = row.get_text().strip()
+        row_text = row.get_text().strip().lower()  # Lowercase for match
         logging.debug(f"Variant row text: {row_text}")
         
         # Check if row contains our exact version
-        if version in row_text or version.replace('.', '-') in row_text:
-            # Check criteria
-            if all(criterion in row_text for criterion in criteria):
+        if version.lower() in row_text or version.replace('.', '-').lower() in row_text:
+            # Check criteria (case-insensitive)
+            if all(criterion.lower() in row_text for criterion in criteria):
                 sub_url = row.find('a', class_='accent_color')
                 if sub_url:
                     download_page_url = APKMIRROR_BASE + sub_url['href']
@@ -213,8 +216,8 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     # If exact version not found, try to find any variant matching criteria
     if not download_page_url:
         for row in rows:
-            row_text = row.get_text().strip()
-            if all(criterion in row_text for criterion in criteria):
+            row_text = row.get_text().strip().lower()
+            if all(criterion.lower() in row_text for criterion in criteria):
                 # Check if this looks like a variant row (has version numbers)
                 if re.search(r'\d+(\.\d+)+', row_text):
                     sub_url = row.find('a', class_='accent_color')
@@ -232,14 +235,14 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
         logging.error(f"No variant found for {app_name} {version} with criteria {criteria}")
         # Debug: log what rows we found
         logging.debug(f"Found {len(rows)} rows total")
-        for idx, row in enumerate(rows[:5]): # First 5 rows
-            logging.debug(f"Row {idx}: {row.get_text()[:100]}...")
+        for idx, row in enumerate(rows):  # All rows for full debug
+            logging.debug(f"Row {idx}: {row.get_text()[:200]}...")
         return None
     
     # --- STANDARD DOWNLOAD FLOW ---
     try:
         # Add delay before next request
-        time.sleep(1 + random.random())
+        time.sleep(2 + random.random())
         
         response = scraper.get(download_page_url)
         response.encoding = 'utf-8'
@@ -252,7 +255,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
             final_download_page_url = APKMIRROR_BASE + sub_url['href']
             
             # Add delay before final request
-            time.sleep(1 + random.random())
+            time.sleep(2 + random.random())
             
             response = scraper.get(final_download_page_url)
             response.encoding = 'utf-8'
@@ -291,7 +294,7 @@ def get_latest_version(app_name: str, config: dict, scraper=None) -> str:
         main_url = f"{APKMIRROR_BASE}/apk/{config['org']}/{config['name']}/"
         
         # Add delay
-        time.sleep(1 + random.random())
+        time.sleep(2 + random.random())
         
         response = scraper.get(main_url)
         response.encoding = 'utf-8'
@@ -311,7 +314,7 @@ def get_latest_version(app_name: str, config: dict, scraper=None) -> str:
     url = f"{APKMIRROR_BASE}/uploads/?appcategory={config['name']}"
     
     # Add delay
-    time.sleep(1 + random.random())
+    time.sleep(2 + random.random())
     
     response = scraper.get(url)
     response.encoding = 'utf-8'
