@@ -1,1 +1,5 @@
-{"name":"google-news","package":"com.google.android.apps.magazines","version":""}
+{
+  "name":"google-play-newsstand",
+  "package":"com.google.android.apps.magazines",
+  "version":""
+}
