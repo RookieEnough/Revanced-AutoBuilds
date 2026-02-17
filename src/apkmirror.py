@@ -50,7 +50,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
         logging.error(f"Release page failed: {e}")
         return None
 
-    # 2. Generate variant page (exact pattern that works for your links)
+    # 2. Generate variant page (exact pattern that matches your screenshot)
     variant_map = {
         "arm64-v8a": "3",
         "armeabi-v7a": "4",
@@ -61,7 +61,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     variant_url = f"{release_url.rstrip('/')}/{release_name}-{version_dash}-{suffix}-android-apk-download/"
     logging.info(f"Generated variant page for {target_arch}: {variant_url}")
 
-    # 3. Load variant page and extract the REAL download button
+    # 3. Load variant page and get the red "DOWNLOAD APK" button
     try:
         time.sleep(3 + random.random())
         response = scraper.get(variant_url)
@@ -71,38 +71,36 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
 
         logging.debug(f"Variant page title: {soup.find('title').get_text() if soup.find('title') else 'No title'}")
 
+        # ROBUST BUTTON FINDER (matches your screenshot exactly)
         btn = None
-        # Method 1: Button with exact text "Download APK"
+        
+        # 1. Exact text "DOWNLOAD APK" (your screenshot)
         for a in soup.find_all('a'):
-            if a.get_text().strip().lower() == "DOWNLOAD APK":
+            text = a.get_text().strip().upper()
+            if "DOWNLOAD APK" in text:
                 btn = a
+                logging.info(f"Found button by text 'DOWNLOAD APK'")
                 break
 
-        # Method 2: Any link containing forcebaseapk=true
+        # 2. href with forcebaseapk=true (your pasted link)
         if not btn:
             for a in soup.find_all('a', href=True):
                 if 'forcebaseapk=true' in a['href']:
                     btn = a
-                    break
-
-        # Method 3: Any link containing download/?key=
-        if not btn:
-            for a in soup.find_all('a', href=True):
-                if 'download/?key=' in a['href']:
-                    btn = a
+                    logging.info(f"Found button by forcebaseapk=true")
                     break
 
         if btn and btn.get('href'):
             final_url = APKMIRROR_BASE + btn['href']
-            logging.info(f"✅ SUCCESS - Final APK download URL: {final_url}")
+            logging.info(f"✅ SUCCESS - Final APK URL: {final_url}")
             return final_url
         else:
-            logging.error("Button not found. Dumping all links on variant page:")
+            logging.error("Button not found. Dumping all links:")
             for a in soup.find_all('a', href=True)[:30]:
-                logging.debug(f"  Link: {a.get('href')} | Text: {a.get_text()[:50]}")
+                logging.debug(f"Link: {a.get('href')} | Text: {a.get_text().strip()[:80]}")
 
     except Exception as e:
-        logging.error(f"Variant page or button extraction failed: {e}")
+        logging.error(f"Variant page or button failed: {e}")
 
     logging.error("All methods failed")
     return None
