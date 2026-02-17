@@ -4,7 +4,6 @@ import time
 import random
 import cloudscraper
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 
 APKMIRROR_BASE = "https://www.apkmirror.com"
 
@@ -37,58 +36,18 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     version_dash = version.replace('.', '-').lower()
     release_name = config.get('release_prefix', config['name'])
 
-    # 1. Release page (base URL)
+    # Load release page
     release_url = f"{APKMIRROR_BASE}/apk/{config['org']}/{config['name']}/{release_name}-{version_dash}-release/"
-    
-    # 2. Variant Page Construction
-    # NOTE: Hardcoding suffix IDs (3, 4, 5...) is risky as they can change based on upload order.
-    # ideally, you should scrape the release_url to find the correct variant link for your arch.
-    # keeping your logic for now:
-    variant_map = {
-        "arm64-v8a": "3",
-        "armeabi-v7a": "4",
-        "x86": "5",
-        "x86_64": "6"
-    }
-    suffix = variant_map.get(target_arch, "3")
-    variant_url = f"{release_url.rstrip('/')}/{release_name}-{version_dash}-{suffix}-android-apk-download/"
-    
-    # 3. SCRAPE THE DOWNLOAD PAGE (The Missing Step)
-    # We must visit the page that says "Your download will start immediately..." to get the key.
-    download_landing_url = f"{variant_url.rstrip('/')}/download/"
-    logging.info(f"Loading download landing page: {download_landing_url}")
-    time.sleep(3 + random.random()) # Be gentle
+    logging.info(f"Loading release page: {release_url}")
+    time.sleep(3 + random.random())
 
     try:
-        response = scraper.get(download_landing_url)
+        response = scraper.get(release_url)
         response.encoding = 'utf-8'
         response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, "html.parser")
-        
-        # Look for the anchor tag that contains the download key
-        # Usually inside a paragraph saying "If not, please click here"
-        # The link usually looks like: /apk/.../download/?key=...
-        download_link_tag = soup.find("a", href=lambda h: h and "key=" in h)
-
-        if download_link_tag:
-            href = download_link_tag['href']
-            final_url = urljoin(APKMIRROR_BASE, href)
-            
-            # Ensure forcebaseapk is present if you specifically need it
-            if "forcebaseapk=true" not in final_url:
-                final_url += "&forcebaseapk=true"
-                
-            logging.info(f"✅ Found secure download link: {final_url}")
-            return final_url
-        else:
-            logging.error("Could not find the secure link (key) in the response.")
-            # Debugging: Save html to inspect if needed
-            # with open("debug_fail.html", "w", encoding="utf-8") as f: f.write(response.text)
-            return None
-
+        logging.info(f"✓ Release page loaded")
     except Exception as e:
-        logging.error(f"Failed to get download key: {e}")
+        logging.error(f"Release page failed: {e}")
         return None
 
     # Generate variant page
@@ -102,7 +61,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     variant_url = f"{release_url.rstrip('/')}/{release_name}-{version_dash}-{suffix}-android-apk-download/"
     logging.info(f"Generated variant page for {target_arch}: {variant_url}")
 
-    # Load variant page and extract the REAL button with forcebaseapk=true (your copied link)
+    # Load variant page and extract the EXACT final button with key (matches your screenshot and copied link)
     try:
         time.sleep(3 + random.random())
         response = scraper.get(variant_url)
@@ -112,27 +71,34 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
 
         logging.debug(f"Variant page title: {soup.find('title').get_text() if soup.find('title') else 'No title'}")
 
-        # GOD-CODER BUTTON FINDER - finds the exact button in your screenshot
+        # Exact match for the red button in your screenshot
         btn = None
         for a in soup.find_all('a', href=True):
-            href = a['href'].lower()
+            href = a['href']
             text = a.get_text().strip().upper()
-            if 'forcebaseapk=true' in href or 'download/?key=' in href or 'download apk' in text:
+            if ('forcebaseapk=true' in href or 'download/?key=' in href) and 'download apk' in text:
                 btn = a
-                logging.info(f"Found download button (text: '{text[:50]}', href contains forcebaseapk=true)")
+                logging.info(f"Found button: text='{text}', href contains key & forcebaseapk=true")
                 break
 
         if btn and btn.get('href'):
             final_url = APKMIRROR_BASE + btn['href']
             logging.info(f"✅ SUCCESS - Final APK download URL: {final_url}")
             return final_url
-        else:
-            logging.error("Button not found. Dumping all links on variant page:")
-            for a in soup.find_all('a', href=True)[:30]:
-                logging.debug(f"Link: {a.get('href')} | Text: {a.get_text().strip()[:80]}")
+
+        # Backup scan (if button text is slightly different)
+        for a in soup.find_all('a', href=True):
+            if 'forcebaseapk=true' in a['href'] and 'download/?key=' in a['href']:
+                final_url = APKMIRROR_BASE + a['href']
+                logging.info(f"✅ SUCCESS (backup) - Final APK download URL: {final_url}")
+                return final_url
+
+        logging.error("Button not found. Dumping all links on variant page:")
+        for a in soup.find_all('a', href=True)[:30]:
+            logging.debug(f"Link: {a.get('href')} | Text: {a.get_text().strip()[:80]}")
 
     except Exception as e:
-        logging.error(f"Variant page failed: {e}")
+        logging.error(f"Variant page or button failed: {e}")
 
     logging.error("All methods failed")
     return None
