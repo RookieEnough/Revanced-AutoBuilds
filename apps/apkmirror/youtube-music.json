@@ -4,5 +4,6 @@
     "release_prefix": "youtube-music",
     "type": "release",
     "arch": "arm64-v8a",
-    "dpi": "nodpi"
+    "dpi": "nodpi",
+    "package":"com.google.android.apps.youtube.music"
 }
