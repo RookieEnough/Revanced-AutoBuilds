@@ -1,1 +1,1 @@
-- AddResourcesPatch
+-AddResourcesPatch
