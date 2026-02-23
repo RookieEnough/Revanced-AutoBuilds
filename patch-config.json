@@ -18,6 +18,7 @@
     { "app_name": "prime-video", "source": "revanced" },
     { "app_name": "proton-mail", "source": "revanced" },
     { "app_name": "proton-vpn", "source": "hoo" },
+    { "app_name": "material", "source": "hoo" },
     { "app_name": "rar", "source": "revanced" },
     { "app_name": "strava", "source": "revanced" },
     { "app_name": "tumblr", "source": "revanced" },
