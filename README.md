@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-A sophisticated, automated pipeline that builds ready-to-install ReVanced applications for <strong>non-rooted Android devices</strong>. This system automatically fetches the latest ReVanced tools, downloads base APKs from multiple sources, applies patches, and publishes optimized APKs with architecture-specific builds.
+A sophisticated, automated pipeline that builds ready-to-install Morphe applications for <strong>non-rooted Android devices</strong>. This system automatically fetches the latest Morphe tools, downloads base APKs from multiple sources, applies patches, and publishes optimized APKs with architecture-specific builds.
 </p>
 
 [![View Latest Release](https://img.shields.io/badge/View%20Latest%20Release-0A0A0A?style=flat&logo=github&logoColor=white)](https://github.com/RookieEnough/Revanced-AutoBuilds/releases/latest)
