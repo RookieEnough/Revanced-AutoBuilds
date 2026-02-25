@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔧 ReVanced Non-Root Builder
+# 🔧 Morphe Non-Root Builder
 
 [![Daily Build](https://img.shields.io/github/actions/workflow/status/RookieEnough/Revanced-AutoBuilds/patch.yml?label=Daily%20Build&style=for-the-badge&color=2ea44f)](https://github.com/RookieEnough/Revanced-AutoBuilds/actions/workflows/patch.yml)
 [![Latest Release](https://img.shields.io/github/v/release/RookieEnough/Revanced-AutoBuilds?style=for-the-badge&label=Latest%20Release&color=0366d6)](https://github.com/RookieEnough/Revanced-AutoBuilds/releases/latest)
@@ -44,7 +44,7 @@ A sophisticated, automated pipeline that builds ready-to-install ReVanced applic
 
 | Mirror | Description | Link |
 | :--- | :--- | :--- |
-| **GitHub Releases** | Primary source. Contains all builds. | [**Download Latest Release**](https://RookieEnough/Revanced-AutoBuilds/releases/latest) |
+| **GitHub Releases** | Primary source. Contains all builds. | [**Download Latest Release**](https://RookieEnough/morphe-AutoBuilds/releases/latest) |
 
 ### 📱 Supported Apps & Architectures
 
@@ -108,9 +108,9 @@ Define which applications the pipeline should attempt to build.
 ```json
 {
   "patch_list": [
-    { "app_name": "youtube", "source": "revanced" },
-    { "app_name": "youtube-music", "source": "revanced" },
-    { "app_name": "twitter", "source": "revanced" }
+    { "app_name": "youtube", "source": "morphe" },
+    { "app_name": "youtube-music", "source": "morphe" },
+    { "app_name": "X", "source": "crimera" }
   ]
 }
 
@@ -124,12 +124,12 @@ Specify which CPU architectures to target for each application.
 [
   {
     "app_name": "youtube",
-    "source": "revanced",
+    "source": "morphe",
     "arches": ["arm64-v8a", "armeabi-v7a", "universal"]
   },
   {
     "app_name": "youtube-music",
-    "source": "revanced",
+    "source": "morphe",
     "arches": ["arm64-v8a", "armeabi-v7a"]
   }
 ]
@@ -155,7 +155,7 @@ Located in the `apps/` directory. Example for `apps/apkmirror/youtube.json`:
 
 ### 4. Patch Rules
 
-Located in `patches/`. Example for `patches/youtube-revanced.txt`. Use `+` to force include and `-` to exclude.
+Located in `patches/`. Example for `patches/youtube-morphe.txt`. Use `+` to force include and `-` to exclude.
 
 ```text
 # Essential patches
@@ -186,8 +186,8 @@ If you prefer to build the APKs on your own machine, follow these steps.
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/RookieEnough/Revanced-AutoBuilds.git
-cd revanced-nonroot
+git clone https://github.com/RookieEnough/morphe-AutoBuilds.git
+cd morphe-nonroot
 
 ```
 
@@ -204,7 +204,7 @@ pip install requests beautifulsoup4
 You can build for a specific app and source.
 ```bash
 export APP_NAME="youtube"
-export SOURCE="revanced"
+export SOURCE="morphe"
 python -m src
 
 ```
@@ -213,7 +213,7 @@ python -m src
 4. **Target specific architecture (Optional):**
 ```bash
 export APP_NAME="youtube"
-export SOURCE="revanced"
+export SOURCE="morphe"
 export ARCH="arm64-v8a"  # Options: arm64-v8a, armeabi-v7a, universal
 python -m src
 
@@ -259,11 +259,11 @@ Contributions to improve the toolchain or add support for new apps are welcome.
 
 ## ⚠️ Disclaimer & Legal
 
-> **Important:** This project is an automated build tool. The APKs provided in the releases are generated automatically using official ReVanced tools and patches.
+> **Important:** This project is an automated build tool. The APKs provided in the releases are generated automatically using official Morphe tools and patches.
 
-* **Affiliation:** These builds are **not** officially affiliated with the ReVanced Team.
+* **Affiliation:** These builds are **not** officially affiliated with the Morphe Team.
 * **Usage:** Provided for educational and convenience purposes only. Use at your own risk.
-* **GmsCore:** ReVanced GmsCore is required for these non-root apps to function correctly.
+* **GmsCore:** Morphe's MicroG-RE is required for these non-root apps to function correctly.
 * **Updates:** Patches are automatically pulled from the latest sources; builds may occasionally contain experimental features.
 
 ---
