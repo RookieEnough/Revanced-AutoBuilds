@@ -18,6 +18,8 @@
     { "app_name": "prime-video", "source": "hoo" },
     { "app_name": "proton-mail", "source": "revanced" },
     { "app_name": "proton-vpn", "source": "hoo" },
+    { "app_name": "meme", "source": "hoo" },
+    { "app_name": "bussu", "source": "hoo" },
     { "app_name": "material", "source": "hoo" },
     { "app_name": "rar", "source": "revanced" },
     { "app_name": "strava", "source": "revanced" },
