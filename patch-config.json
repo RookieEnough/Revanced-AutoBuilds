@@ -21,6 +21,7 @@
     { "app_name": "meme", "source": "hoo" },
     { "app_name": "bussu", "source": "hoo" },
     { "app_name": "material", "source": "hoo" },
+    { "app_name": "pandora", "source": "hoo" },
     { "app_name": "rar", "source": "revanced" },
     { "app_name": "strava", "source": "revanced" },
     { "app_name": "tumblr", "source": "revanced" },
