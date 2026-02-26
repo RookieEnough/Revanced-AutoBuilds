@@ -1,0 +1,9 @@
+{
+    "org": "pandora",
+    "name": "pandora-music-podcasts",
+    "type": "APK", 
+    "arch": "universal",
+    "dpi": "nodpi",
+    "package" : "com.pandora.android",
+    "version" : ""
+}
